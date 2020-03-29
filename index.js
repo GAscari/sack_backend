@@ -28,8 +28,10 @@ if (cluster.isMaster) {
     for (var i = 0; i < cpu_count; i++) cluster.fork()
 } else {
     router.use("/sack/v01", api_router)
-    var server = https.createServer(options, router)
-    server.listen(443)
+    //var server = https.createServer(options, router)
+    //server.listen(443)
+    var server = http.createServer(router)
+    server.listen(3000)
     process.on('uncaughtException', (code) => {
         console.log('worker fatal error - ' + code);
         process.exit();

@@ -4,12 +4,11 @@ var router = express.Router()
 var mysql = require('mysql')
 var util = require('util')
 
-
 var pool = mysql.createPool({
     host: "192.168.0.111",
     user: "remote",
     password: "remote",
-    database: "sack_v.01"
+    database: "sack_v01"
 })
 
 router.use(express.json())
@@ -71,12 +70,12 @@ router.post("/login", function(req, res) {
                     res.sendStatus(500)
                 }
             })
+            connection.release()
         }
         else {
             console.log("\tinternal pool error")
             res.sendStatus(500)
         } 
-        connection.release()
     })
 })
 
@@ -104,17 +103,26 @@ router.use(function(req, res, next) {
                     res.sendStatus(500)
                 }
             })
+            connection.release()
         } else {
             console.log("\tinternal pool error")
             console.log(err)
             res.sendStatus(500)
         }
-        connection.release()
     })
 })
 
 //GET testa le api
 router.get("/test", function(req, res) {
+    pool.getConnection(function(err, connection){
+        if (!err) {
+            res.sendStatus(200)
+        } else {
+            console.log("\tinternal error")
+            res.sendStatus(500)
+        }
+        connection.release()
+    })
 	res.sendStatus(200)
 })
 
@@ -136,12 +144,12 @@ router.get("/tracks", function(req, res) {
                     res.sendStatus(500)
                 }
             })
+            connection.release()
         } else {
             console.log("\tinternal pool error")
             console.log(err)
             res.sendStatus(500)
         }
-        connection.release()
     })
 })
 
@@ -165,12 +173,12 @@ router.post("/tracks", function(req, res) {
                     res.sendStatus(500)
                 }
             })
+            connection.release()
         } else {
             console.log("\tinternal pool error")
             console.log(err)
             res.sendStatus(500)
         }
-        connection.release()
     })
 })
 
@@ -195,12 +203,12 @@ router.put("/tracks", function(req, res) {
                     res.sendStatus(500)
                 }
             })
+            connection.release()
         } else {
             console.log("\tinternal pool error")
             console.log(err)
             res.sendStatus(500)
         }
-        connection.release()
     })
 })
 
@@ -222,346 +230,12 @@ router.delete("/tracks", function(req, res) {
                     res.sendStatus(500)
                 }
             })
+            connection.release()
         } else {
             console.log("\tinternal pool error")
             console.log(err)
             res.sendStatus(500)
         }
-        connection.release()
-    })
-})
-
-
-// /artists -  - #### ARTISTS ####
-router.get("/artists", function(req, res) {
-    console.log("> " + req.ip + " - artists requested...")
-
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="select artist_id, name, count(track_id) as count from artists natural join tracks where mail=? group by artist_id;"
-            var data=[]
-            data.push(req.query.mail)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\treturning artists...")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-                    console.log(err)
-                    res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-router.post("/artists", function(req, res) {
-    console.log("> " + req.ip + " - adding artist...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="insert into artists(name, mail) values(?, ?);"
-            var data=[]
-            data.push(req.body.name)
-            data.push(req.query.mail)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\tartist added")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-router.put("/artists", function(req, res) {
-    console.log("> " + req.ip + " - updating artist...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="update artists set name=? where mail=? and artist_id=?;"
-            var data=[]
-            data.push(req.body.name)
-            data.push(req.query.mail)
-            data.push(req.body.artist_id)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\tartist updated")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-router.delete("/artists", function(req, res) {
-    console.log("> " + req.ip + " - deleting artist...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="delete from artists where mail=? and artist_id=?;"
-            var data=[]
-            data.push(req.query.mail)
-            data.push(req.body.artist_id)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\tartist deleted")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-// /playlists - #### PLAYLISTS ####
-router.get("/playlists", function(req, res) {
-    console.log("> " + req.ip + " - playlists requested...")
-
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="select playlist_id, title, creation, count(playlist_id) as count from playlists natural join links where mail=? group by (playlist_id);"
-            var data=[]
-            data.push(req.query.mail)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\treturning playlists...")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-router.post("/playlists", function(req, res) {
-    console.log("> " + req.ip + " - adding playlist...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="insert into playlists(title, mail) values(?, ?);"
-            var data=[]
-            data.push(req.body.title)
-            data.push(req.query.mail)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\tplaylist added")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-router.put("/playlists", function(req, res) {
-    console.log("> " + req.ip + " - updating playlist...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="update playlists set title=? where mail=? and playlist_id=?;"
-            var data=[]
-            data.push(req.body.title)
-            data.push(req.query.mail)
-            data.push(req.body.playlist_id)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\tplaylist updated")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-router.delete("/playlists", function(req, res) {
-    console.log("> " + req.ip + " - deleting playlist...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="delete from playlists where mail=? and playlist_id=?;"
-            var data=[]
-            data.push(req.query.mail)
-            data.push(req.body.playlist_id)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\tplaylist deleted")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-// /links - #### LINKS ####
-router.get("/links", function(req, res) {
-    console.log("> " + req.ip + " - links requested...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="select playlist_id, track_id from links where mail=?;"
-            var data=[]
-            data.push(req.query.mail)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\treturning links...")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-router.post("/links", function(req, res) {
-    console.log("> " + req.ip + " - adding link...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="insert into links(track_id, playlist_id, mail) values(?, ?, ?);"
-            var data=[]
-            data.push(req.body.track_id)
-            data.push(req.body.playlist_id)
-            data.push(req.query.mail)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\tlinks added")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-router.put("/links", function(req, res) {
-    console.log("> " + req.ip + " - updating link...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="update links set playlist_id=?, track_id=? where mail=? and playlist_id=? and track_id=?;"
-            var data=[]
-            data.push(req.body.playlist_id)
-            data.push(req.body.track_id)
-            data.push(req.query.mail)
-            data.push(req.body.old_playlist_id)
-            data.push(req.body.old_track_id)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\tlink updated")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
-    })
-})
-
-router.delete("/links", function(req, res) {
-    console.log("> " + req.ip + " - deleting link...")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="delete from links where mail=? and playlist_id=? and  track_id=?;"
-            var data=[]
-            data.push(req.query.mail)
-            data.push(req.body.playlist_id)
-            data.push(req.body.track_id)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\tlink deleted")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-        connection.release()
     })
 })
 

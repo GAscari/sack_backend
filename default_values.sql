@@ -1,0 +1,2 @@
+insert into customer (mail, name, psw, verified, ver_code) values("dev@dev.com", "dev", SHA2('yeet', 512), true, "0123456789abcdef");
+--insert into links(track_id, playlist_id, mail) values (1, 1, "dev@dev.com"), (3, 1, "dev@dev.com"), (2, 1, "dev@dev.com");
