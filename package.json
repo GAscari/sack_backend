@@ -1,0 +1,20 @@
+{
+  "name": "sack_v.01",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/GAscari/sack_v.01.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gitlab.com/GAscari/sack_v.01/issues"
+  },
+  "homepage": "https://gitlab.com/GAscari/sack_v.01#readme"
+}
