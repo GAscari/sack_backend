@@ -1,7 +1,6 @@
 var express = require("express")
 const uuid = require('uuid/v4')
 var router = express.Router()
-var fs = require('fs')
 var mysql = require('mysql')
 var util = require('util')
 
