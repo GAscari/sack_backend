@@ -1,5 +1,17 @@
-INSERT INTO customers (mail, name, psw, verified)
-VALUES("cust1@dev.com", "customer1", SHA2('yeet', 512), true);
+INSERT INTO mails (mail, verified_mail, verified_mail_code)
+VALUES ("mail1@dev.com", true, "0248");
+
+INSERT INTO telephones (prefix, telephone, verified_telephone, verified_telephone_code)
+VALUES (39, 3385897440, true, "0248");
+
+INSERT INTO municipalities (postal_code, name, image, description)
+VALUES (38068, "ROVERETO", NULL, NULL);
+
+INSERT INTO municipalities_fracion   (postal_code, name, image, description)
+VALUES (38068, "ROVERETO", NULL, NULL);
+
+INSERT INTO humans (name, image, telephone_id, mail_id, psw, address_id)
+VALUES("human1", "image_url1", 1, 1, SHA2('yeet', 512), );
 
 INSERT INTO merchants (merchant_name, shop_name, mail, psw, verified)
 VALUES
