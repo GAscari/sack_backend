@@ -25,48 +25,51 @@ router.post("/login", function(req, res) {
     console.log("> " + req.ip + " - token requested...")
     var mail = req.body.mail
     var psw = req.body.psw
-
+    var device_uuid = req.body.device_uuid
     pool.getConnection(function(err, connection){
         if (!err) {
-            var query="select count(*) as authorized from users where mail=? and psw=SHA2(?, 512);"
+            var query="select count(*) as authorized, human_id from humans where mail=? and psw=SHA2(?, 512) group by human_id;"
             var data=[]
             data.push(mail); data.push(psw)
             connection.query(query, data,  function(err, rows, fields){
                 if (!err) {
                     console.log("\tselezione ok")
                     if (rows[0].authorized == 1) {
-                        var query="insert into tokens(uuid, mail) values(?, ?);"
+                        var human_id = rows[0].human_id
+                        var query="insert into human_tokens(uuid, device_uuid, human_id) values(?, ?, ?);"
+                        console.log(">>> " + human_id)
                         var data=[]
-                        data.push(uuid()); data.push(mail)
+                        data.push(uuid()); data.push(device_uuid); data.push(human_id)
                         connection.query(query,data,function(err,rows,fields){
                             if (!err) {
                                 console.log("\ttoken inserted")
-                                var query="select mail, uuid from tokens where mail=? order by creation desc limit 1;"
+                                var query="select human_id, uuid from human_tokens where human_id=? order by creation desc limit 1;"
                                 var data=[]
-                                data.push(mail)
+                                data.push(human_id)
                                 connection.query(query,data,function(err,rows,fields){
                                     if (!err) {
                                         console.log("\ttoken sent")
-
                                         res.json(rows)
                                     } else {
-                                        console.log("\tinternal error")
+                                        console.log("\tinternal server error (token_returning)")
                                         console.log(err)
                                         res.sendStatus(500)
                                     }
                                 })
                             } else {
-                                console.log("\tinternal error")
+                                console.log("\tinternal server error (token_insertion)")
                                 console.log(err)
                                 res.sendStatus(500)
                             }
                         })
                     } else {
-                        console.log("\tunauthorized to get token (" + rows[0].authorized + ")")
+                        console.log("\tunauthorized to get token (" + rows[0].authorized + "???)")
+                        console.log(err)
                         res.sendStatus(403)
                     }
                 } else {
-                    console.log("\tinternal error")
+                    console.log("\tinternal server error (checking_auth)")
+                    console.log(err)
                     res.sendStatus(500)
                 }
             })
@@ -74,6 +77,7 @@ router.post("/login", function(req, res) {
         }
         else {
             console.log("\tinternal pool error")
+            console.log(err)
             res.sendStatus(500)
         } 
     })
@@ -84,9 +88,9 @@ router.use(function(req, res, next) {
     console.log("> " + req.ip + " - access requested...")
     pool.getConnection(function(err, connection){
         if (!err) {
-            var query="select count(*) as authorized from tokens where mail=? and uuid=? and expiration>=current_timestamp;"
+            var query="select count(*) as authorized from human_tokens where human_id=? and uuid=? and device_uuid=? and timestampadd(month,1,creation)>=current_timestamp;"
             var data=[]
-            data.push(req.query.mail); data.push(req.query.uuid)
+            data.push(req.query.human_id); data.push(req.query.uuid); data.push(req.query.device_uuid)
             connection.query(query, data,  function(err, rows, fields){
                 if (!err) {
                     console.log("\ttoken examination...")
@@ -123,20 +127,29 @@ router.get("/test", function(req, res) {
         }
         connection.release()
     })
-	res.sendStatus(200)
 })
 
 // /tracks - #### TRACKS ####
-router.get("/tracks", function(req, res) {
-    console.log("> " + req.ip + " - tracks requested...")
+router.get("/items", function(req, res) {
+    console.log("> " + req.ip + " - items requested...")
     pool.getConnection(function(err, connection){
         if (!err) {
-            var query="select track_id, title, artist_id, ytid, name from tracks natural join artists where mail=?;"
+            var shop_id = null
+            shop_id = req.query.shop_id
+            var query
             var data=[]
-            data.push(req.query.mail)
+            if (shop_id == null) {
+                query="select * from items;"
+                data=[]
+                data.push()
+            } else {
+                query="select * from items where shop_id=?;"
+                data=[]
+                data.push(shop_id)
+            }
             connection.query(query, data,  function(err, rows, fields){
                 if (!err) {
-                    console.log("\treturning tracks...")
+                    console.log("\treturning items...")
                     res.json(rows)
                 } else {
                     console.log("\tinternal error")
@@ -152,7 +165,7 @@ router.get("/tracks", function(req, res) {
         }
     })
 })
-
+/*
 router.post("/tracks", function(req, res) {
     console.log("> " + req.ip + " - adding track...")
     pool.getConnection(function(err, connection){
@@ -238,5 +251,5 @@ router.delete("/tracks", function(req, res) {
         }
     })
 })
-
+*/
 module.exports = router
