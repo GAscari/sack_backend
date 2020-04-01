@@ -22,7 +22,7 @@ router.use(function(req, res, next) {
 
 //POST - chiede il rilascio di un token con login
 router.post("/login", function(req, res) {
-    console.log("> " + req.ip + " - token requested...")
+    console.log("> " + req.ip + " - token requested")
     var mail = req.body.mail
     var psw = req.body.psw
     var device_uuid = req.body.device_uuid
@@ -85,7 +85,7 @@ router.post("/login", function(req, res) {
 
 //USE - verifica che il token sia autorizzato
 router.use(function(req, res, next) {
-    console.log("> " + req.ip + " - access requested...")
+    console.log("> " + req.ip + " - access requested")
     pool.getConnection(function(err, connection){
         if (!err) {
             var query="select count(*) as authorized from human_tokens where human_id=? and uuid=? and device_uuid=? and timestampadd(month,1,creation)>=current_timestamp;"
@@ -93,7 +93,7 @@ router.use(function(req, res, next) {
             data.push(req.query.human_id); data.push(req.query.uuid); data.push(req.query.device_uuid)
             connection.query(query, data,  function(err, rows, fields){
                 if (!err) {
-                    console.log("\ttoken examination...")
+                    console.log("\ttoken examination")
                     if (rows[0].authorized != 0) {
                         console.log("\ttoken approved")
                         next()
@@ -129,27 +129,14 @@ router.get("/test", function(req, res) {
     })
 })
 
-// /tracks - #### TRACKS ####
-router.get("/items", function(req, res) {
-    console.log("> " + req.ip + " - items requested...")
+// <<<< QUESTA è ORO (spero) >>>>
+function get_query(query, data, req, res, pool, tag) {
+    console.log("> " + req.ip + " - " + tag + " requested")
     pool.getConnection(function(err, connection){
         if (!err) {
-            var shop_id = null
-            shop_id = req.query.shop_id
-            var query
-            var data=[]
-            if (shop_id == null) {
-                query="select * from items;"
-                data=[]
-                data.push()
-            } else {
-                query="select * from items where shop_id=?;"
-                data=[]
-                data.push(shop_id)
-            }
             connection.query(query, data,  function(err, rows, fields){
                 if (!err) {
-                    console.log("\treturning items...")
+                    console.log("\treturning " + tag + "")
                     res.json(rows)
                 } else {
                     console.log("\tinternal error")
@@ -164,10 +151,74 @@ router.get("/items", function(req, res) {
             res.sendStatus(500)
         }
     })
+}
+
+// /tracks - #### TRACKS ####
+router.get("/items", function(req, res) {
+    var shop_id = null
+    shop_id = req.query.shop_id
+    var query
+    var data=[]
+    if (shop_id == null) {
+        query="select * from items natural join measurements;"
+        data=[]
+        data.push()
+    } else {
+        query="select * from items natural join measurements where shop_id=?;"
+        data=[]
+        data.push(shop_id)
+    }
+    get_query(query, data, req, res, pool, "items")
 })
+
+router.get("/item", function(req, res) {
+    var query="select * from items natural join measurements where item_id=?;"
+    var data=[]
+    data.push(req.query.item_id)
+    get_query(query, data, req, res, pool, "item")
+})
+
+/*
+router.get("/items", function(req, res) {
+    console.log("> " + req.ip + " - items requested")
+    pool.getConnection(function(err, connection){
+        if (!err) {
+            var shop_id = null
+            shop_id = req.query.shop_id
+            var query
+            var data=[]
+            if (shop_id == null) {
+                query="select * from items natural join measurements;"
+                data=[]
+                data.push()
+            } else {
+                query="select * from items natural join measurements where shop_id=?;"
+                data=[]
+                data.push(shop_id)
+            }
+            connection.query(query, data,  function(err, rows, fields){
+                if (!err) {
+                    console.log("\treturning items")
+                    res.json(rows)
+                } else {
+                    console.log("\tinternal error")
+                    console.log(err)
+                    res.sendStatus(500)
+                }
+            })
+            connection.release()
+        } else {
+            console.log("\tinternal pool error")
+            console.log(err)
+            res.sendStatus(500)
+        }
+    })
+})*/
+
+
 /*
 router.post("/tracks", function(req, res) {
-    console.log("> " + req.ip + " - adding track...")
+    console.log("> " + req.ip + " - adding track")
     pool.getConnection(function(err, connection){
         if (!err) {
             var query="insert into tracks(title, artist_id, ytid, mail) values(?, ?, ?, ?);"
@@ -196,7 +247,7 @@ router.post("/tracks", function(req, res) {
 })
 
 router.put("/tracks", function(req, res) {
-    console.log("> " + req.ip + " - updating track...")
+    console.log("> " + req.ip + " - updating track")
     pool.getConnection(function(err, connection){
         if (!err) {
             var query="update tracks set title=?, artist_id=?, ytid=? where mail=? and track_id=?;"
@@ -226,7 +277,7 @@ router.put("/tracks", function(req, res) {
 })
 
 router.delete("/tracks", function(req, res) {
-    console.log("> " + req.ip + " - deleting track...")
+    console.log("> " + req.ip + " - deleting track")
     pool.getConnection(function(err, connection){
         if (!err) {
             var query="delete from tracks where mail=? and track_id=?;"

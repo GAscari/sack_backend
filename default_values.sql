@@ -10,7 +10,7 @@ VALUES
     ("shop2");
 
 
-INSERT INTO measurements (measurement_id, name)
+INSERT INTO measurements (measurement_id, measurement_name)
 VALUES
     (1, "kg"),
     (2, "cad.");

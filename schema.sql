@@ -70,7 +70,6 @@ CREATE TABLE `human_tokens` (
   `uuid` varchar(255),
   `device_uuid` varchar(255),
   `creation` timestamp DEFAULT current_timestamp,
-  `expiration` timestamp,
   `human_id` int
 );
 
@@ -89,7 +88,7 @@ CREATE TABLE `items` (
 
 CREATE TABLE `measurements` (
   `measurement_id` int PRIMARY KEY,
-  `name` varchar(255)
+  `measurement_name` varchar(255)
 );
 
 CREATE TABLE `orders` (
