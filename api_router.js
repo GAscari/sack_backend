@@ -3,6 +3,7 @@ const uuid = require('uuid/v4')
 var router = express.Router()
 var mysql = require('mysql')
 var util = require('util')
+var db_query = require('./db_queries')
 
 var pool = mysql.createPool({
     host: "192.168.0.111",
@@ -13,6 +14,7 @@ var pool = mysql.createPool({
 
 router.use(express.json())
 router.use(express.urlencoded({ extended: true }))
+
 
 //USE - stampa ip e ora richiesta
 router.use(function(req, res, next) {
@@ -129,178 +131,70 @@ router.get("/test", function(req, res) {
     })
 })
 
-// <<<< QUESTA è ORO (spero) >>>>
-function get_query(query, data, req, res, pool, tag) {
-    console.log("> " + req.ip + " - " + tag + " requested")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\treturning " + tag + "")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-            connection.release()
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-    })
-}
-
-// /tracks - #### TRACKS ####
+// <<<< ITEMS >>>>
 router.get("/items", function(req, res) {
     var shop_id = null
     shop_id = req.query.shop_id
     var query
     var data=[]
     if (shop_id == null) {
-        query="select * from items natural join measurements;"
+        query="SELECT * FROM items NATURAL LEFT JOIN measurements;"
         data=[]
         data.push()
     } else {
-        query="select * from items natural join measurements where shop_id=?;"
+        query="SELECT * FROM items NATURAL LEFT JOIN measurements WHERE shop_id=?;"
         data=[]
         data.push(shop_id)
     }
-    get_query(query, data, req, res, pool, "items")
+    db_query.get(query, data, req, res, pool, "items")
 })
 
 router.get("/item", function(req, res) {
-    var query="select * from items natural join measurements where item_id=?;"
+    var query="SELECT * FROM items NATURAL LEFT JOIN measurements WHERE item_id=?;"
     var data=[]
     data.push(req.query.item_id)
-    get_query(query, data, req, res, pool, "item")
+    db_query.get(query, data, req, res, pool, "item")
 })
 
-/*
-router.get("/items", function(req, res) {
-    console.log("> " + req.ip + " - items requested")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var shop_id = null
-            shop_id = req.query.shop_id
-            var query
-            var data=[]
-            if (shop_id == null) {
-                query="select * from items natural join measurements;"
-                data=[]
-                data.push()
-            } else {
-                query="select * from items natural join measurements where shop_id=?;"
-                data=[]
-                data.push(shop_id)
-            }
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\treturning items")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-            connection.release()
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-    })
-})*/
+router.post("/item", function(req, res) {
+    var query = "INSERT INTO items (" 
+    var query2 = ") VALUES ("
+    
+    var data=[]
 
-
-/*
-router.post("/tracks", function(req, res) {
-    console.log("> " + req.ip + " - adding track")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="insert into tracks(title, artist_id, ytid, mail) values(?, ?, ?, ?);"
-            var data=[]
-            data.push(req.body.title)
-            data.push(req.body.artist_id)
-            data.push(req.body.ytid)
-            data.push(req.query.mail)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\ttrack added")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-            connection.release()
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
+    for (var prop in req.body) {
+        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
+            query += prop + ", "
+            query2 += "?, "
+            data.push(req.body[prop])
         }
-    })
+    }
+    query = query.slice(0, -2)
+    query2 = query2.slice(0, -2)
+    query += query2 + ");"
+    db_query.post(query, data, req, res, pool, "item")
 })
 
-router.put("/tracks", function(req, res) {
-    console.log("> " + req.ip + " - updating track")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="update tracks set title=?, artist_id=?, ytid=? where mail=? and track_id=?;"
-            var data=[]
-            data.push(req.body.title)
-            data.push(req.body.artist_id)
-            data.push(req.body.ytid)
-            data.push(req.query.mail)
-            data.push(req.body.track_id)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\ttrack updated")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-            connection.release()
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
+router.put("/item", function(req, res) {
+    var query="UPDATE items SET "
+    var data=[]
+    for (var prop in req.body) {
+        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
+            query += prop + "=?, "
+            data.push(req.body[prop])
         }
-    })
+    }
+    query = query.slice(0, -2)
+    query += " WHERE item_id=?;"
+    data.push(req.query.item_id)
+    db_query.put(query, data, req, res, pool, "item")
 })
 
-router.delete("/tracks", function(req, res) {
-    console.log("> " + req.ip + " - deleting track")
-    pool.getConnection(function(err, connection){
-        if (!err) {
-            var query="delete from tracks where mail=? and track_id=?;"
-            var data=[]
-            data.push(req.query.mail)
-            data.push(req.body.track_id)
-            connection.query(query, data,  function(err, rows, fields){
-                if (!err) {
-                    console.log("\ttrack deleted")
-                    res.json(rows)
-                } else {
-                    console.log("\tinternal error")
-                    console.log(err)
-                    res.sendStatus(500)
-                }
-            })
-            connection.release()
-        } else {
-            console.log("\tinternal pool error")
-            console.log(err)
-            res.sendStatus(500)
-        }
-    })
+router.delete("/item", function(req, res) {
+    var query="DELETE FROM items WHERE item_id=?;"
+    var data=[]
+    data.push(req.query.item_id)
+    db_query.delete(query, data, req, res, pool, "item")
 })
-*/
+
 module.exports = router
