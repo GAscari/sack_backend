@@ -4,6 +4,7 @@ var router = express.Router()
 var mysql = require('mysql')
 var util = require('util')
 var db_query = require('./db_queries')
+var fs = require('fs')
 
 var pool = mysql.createPool({
     host: "192.168.0.111",
@@ -131,6 +132,13 @@ router.get("/test", function(req, res) {
     })
 })
 
+router.get("/do_something", function(req, res) {
+    
+    var query = ";"
+    var data=[]
+    db_query.post(query, data, req, res, pool)
+})
+
 // <<<< ITEMS >>>>
 router.get("/items", function(req, res) {
     var shop_id = null
@@ -140,7 +148,6 @@ router.get("/items", function(req, res) {
     if (shop_id == null) {
         query="SELECT * FROM items NATURAL LEFT JOIN measurements;"
         data=[]
-        data.push()
     } else {
         query="SELECT * FROM items NATURAL LEFT JOIN measurements WHERE shop_id=?;"
         data=[]
@@ -195,6 +202,62 @@ router.delete("/item", function(req, res) {
     var data=[]
     data.push(req.query.item_id)
     db_query.delete(query, data, req, res, pool, "item")
+})
+
+// <<<< SHOPS >>>>
+router.get("/shops", function(req, res) {
+    var query
+    var data=[]
+    query="SELECT * FROM shops NATURAL LEFT JOIN dow;"
+    db_query.get(query, data, req, res, pool, "shops")
+})
+
+router.get("/shop", function(req, res) {
+    var query="SELECT * FROM shops NATURAL LEFT JOIN dow WHERE shop_id=?;"
+    var data=[]
+    data.push(req.query.shop_id)
+    db_query.get(query, data, req, res, pool, "shop")
+})
+
+router.post("/shop", function(req, res) {
+    var query = "INSERT INTO shops (" 
+    var query2 = ") VALUES ("
+    
+    var data=[]
+
+    for (var prop in req.body) {
+        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
+            query += prop + ", "
+            query2 += "?, "
+            data.push(req.body[prop])
+        }
+    }
+    query = query.slice(0, -2)
+    query2 = query2.slice(0, -2)
+    query += query2 + ");"
+    db_query.post(query, data, req, res, pool, "shop")
+})
+
+router.put("/shop", function(req, res) {
+    var query="UPDATE shops SET "
+    var data=[]
+    for (var prop in req.body) {
+        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
+            query += prop + "=?, "
+            data.push(req.body[prop])
+        }
+    }
+    query = query.slice(0, -2)
+    query += " WHERE shop_id=?;"
+    data.push(req.query.shop_id)
+    db_query.put(query, data, req, res, pool, "shop")
+})
+
+router.delete("/shop", function(req, res) {
+    var query="DELETE FROM items WHERE shop_id=?;"
+    var data=[]
+    data.push(req.query.shop_id)
+    db_query.delete(query, data, req, res, pool, "shop")
 })
 
 module.exports = router

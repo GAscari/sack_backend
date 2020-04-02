@@ -1,13 +1,23 @@
--- INSERT INTO humans (name, image, telephone_id, mail_id, psw, address_id)
--- VALUES("human1", "image_url1", 1, 1, SHA2('yeet', 512), );
-
 INSERT INTO humans (name, psw, mail, verified_mail)
 VALUES ("human1", SHA2('yeet', 512), "dev@dev.com", true);
 
-INSERT INTO shops (name)
+INSERT INTO human_tokens (uuid, device_uuid, creation, human_id)
+VALUES ('12473807-8e6d-45da-8f77-fc78878fd6ae', 'aaaa', '2020-04-01 16:32:54', '1');
+
+INSERT INTO dow
 VALUES
-    ("shop1"),
-    ("shop2");
+    (1, "lunedì"),
+    (2, "martedì"),
+    (3, "mercoledì"),
+    (4, "giovedì"),
+    (5, "venerdì"),
+    (6, "sabato"),
+    (7, "domenica");
+
+INSERT INTO shops (name, delivery_from_dow,  delivery_to_dow, open_from_dow,  open_to_dow)
+VALUES
+    ("shop1", 1, 5, 1, 5),
+    ("shop2", 1, 5, 1, 5);
 
 
 INSERT INTO measurements (measurement_id, measurement_name)

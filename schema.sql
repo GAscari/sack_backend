@@ -1,3 +1,7 @@
+drop database if exists sack_v01;
+create database sack_v01;
+use sack_v01;
+
 CREATE TABLE `municipalities` (
   `municipality_id` int PRIMARY KEY AUTO_INCREMENT,
   `postal_code` int,
@@ -58,6 +62,12 @@ CREATE TABLE `shops` (
   `delivery_cost` double,
   `created_at` timestamp DEFAULT current_timestamp,
   `address_id` int
+);
+
+CREATE TABLE `deliver_to` (
+  `deliver_to_id` int PRIMARY KEY AUTO_INCREMENT,
+  `shop_id` int,
+  `municipality` int
 );
 
 CREATE TABLE `dow` (
@@ -135,6 +145,10 @@ ALTER TABLE `shops` ADD FOREIGN KEY (`open_from_dow`) REFERENCES `dow` (`dow_id`
 ALTER TABLE `shops` ADD FOREIGN KEY (`open_to_dow`) REFERENCES `dow` (`dow_id`);
 
 ALTER TABLE `shops` ADD FOREIGN KEY (`address_id`) REFERENCES `addresses` (`address_id`);
+
+ALTER TABLE `deliver_to` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`);
+
+ALTER TABLE `deliver_to` ADD FOREIGN KEY (`municipality`) REFERENCES `municipalities` (`municipality_id`);
 
 ALTER TABLE `human_tokens` ADD FOREIGN KEY (`human_id`) REFERENCES `humans` (`human_id`);
 
