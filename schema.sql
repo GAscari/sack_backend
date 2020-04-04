@@ -1,29 +1,19 @@
 drop database if exists sack_v01;
 create database sack_v01;
 use sack_v01;
-
 CREATE TABLE `municipalities` (
   `municipality_id` int PRIMARY KEY AUTO_INCREMENT,
   `postal_code` int,
-  `name` varchar(255),
-  `image` varchar(255),
-  `description` varchar(255)
-);
-
-CREATE TABLE `municipalities_fraction` (
-  `city_id` int PRIMARY KEY AUTO_INCREMENT,
-  `postal_code` int,
-  `name` varchar(255),
-  `image` varchar(255),
-  `description` varchar(255),
-  `municipality` int
+  `municipality_name` varchar(255),
+  `municipality_image` varchar(255),
+  `municipality_description` varchar(255)
 );
 
 CREATE TABLE `addresses` (
   `address_id` int PRIMARY KEY AUTO_INCREMENT,
-  `street` varchar(255),
-  `number` varchar(255),
-  `city_id` int
+  `address_street` varchar(255),
+  `address_number` varchar(255),
+  `municipality_id` int
 );
 
 CREATE TABLE `humans` (
@@ -37,9 +27,9 @@ CREATE TABLE `humans` (
   `verified_mail` boolean,
   `verification_mail_code` int,
   `prefix` integer DEFAULT 39,
-  `telephone` integer,
+  `telephone` bigint,
   `verified_telephone` boolean,
-  `verified_telephone_code` varchar(255)
+  `verification_telephone_code` varchar(255)
 );
 
 CREATE TABLE `shops` (
@@ -47,7 +37,7 @@ CREATE TABLE `shops` (
   `name` varchar(255),
   `mail` varchar(255),
   `prefix` integer DEFAULT 39,
-  `telephone` integer,
+  `telephone` bigint,
   `description` varchar(255),
   `image` varchar(255),
   `min_purchase` double,
@@ -72,7 +62,7 @@ CREATE TABLE `deliver_to` (
 
 CREATE TABLE `dow` (
   `dow_id` int PRIMARY KEY,
-  `name` varchar(255)
+  `dow_name` varchar(255)
 );
 
 CREATE TABLE `human_tokens` (
@@ -112,27 +102,27 @@ CREATE TABLE `orders` (
 
 CREATE TABLE `carts` (
   `cart_id` int PRIMARY KEY AUTO_INCREMENT,
-  `human_id` int,
   `shop_id` int,
+  `human_id` int,
   `bought` boolean,
   `created_at` timestamp
 );
 
 CREATE TABLE `cart_items` (
   `in_cart_item_id` int PRIMARY KEY AUTO_INCREMENT,
-  `item_id` int,
-  `cart_id` int
+  `cart_id` int,
+  `item_quantity` int,
+  `item_id` int
 );
 
 CREATE TABLE `ordered_items` (
   `ordered_item_id` int PRIMARY KEY AUTO_INCREMENT,
-  `item_id` int,
-  `order_id` int
+  `order_id` int,
+  `item_quantity` int,
+  `item_id` int
 );
 
-ALTER TABLE `municipalities_fraction` ADD FOREIGN KEY (`municipality`) REFERENCES `municipalities` (`municipality_id`);
-
-ALTER TABLE `addresses` ADD FOREIGN KEY (`city_id`) REFERENCES `municipalities_fraction` (`city_id`);
+ALTER TABLE `addresses` ADD FOREIGN KEY (`municipality_id`) REFERENCES `municipalities` (`municipality_id`);
 
 ALTER TABLE `humans` ADD FOREIGN KEY (`address_id`) REFERENCES `addresses` (`address_id`);
 
@@ -158,14 +148,14 @@ ALTER TABLE `items` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`);
 
 ALTER TABLE `orders` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`);
 
-ALTER TABLE `carts` ADD FOREIGN KEY (`human_id`) REFERENCES `humans` (`human_id`);
-
 ALTER TABLE `carts` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`);
 
-ALTER TABLE `cart_items` ADD FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`);
+ALTER TABLE `carts` ADD FOREIGN KEY (`human_id`) REFERENCES `humans` (`human_id`);
 
 ALTER TABLE `cart_items` ADD FOREIGN KEY (`cart_id`) REFERENCES `carts` (`cart_id`);
 
-ALTER TABLE `ordered_items` ADD FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`);
+ALTER TABLE `cart_items` ADD FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`);
 
 ALTER TABLE `ordered_items` ADD FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`);
+
+ALTER TABLE `ordered_items` ADD FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`);
