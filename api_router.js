@@ -92,7 +92,7 @@ function getRandomInt(min, max) {
 }
 
 // TODO: transazioni, dovrei riscrivere troppa tanta roba in troppo poco tempo (saremo intasati di indirizzi non referenziati)
-router.post("/signin", function(req, res) {
+router.post("/register", function(req, res) {
     console.log("> " + req.ip + " - registration requested")
     var query = "INSERT INTO addresses (street, number, municipality_id) VALUES (?, ?, ?);"
     var data = []
