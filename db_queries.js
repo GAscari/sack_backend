@@ -34,7 +34,7 @@ var util = require('util')
 //    }
 //}
 
-function argento (query, data, pool, tag, callback) {
+function argento (query, data, pool, callback) {
     console.log("\tquery: " + query)
     console.log("\tdata: " + data)
     var bad = false
@@ -68,7 +68,7 @@ module.exports.argento = argento
 
 module.exports.get = function (query, data, req, res, pool, tag="stuff") {
     console.log("> " + req.ip + " - " + tag + " requested")
-    argento(query, data, pool, tag, (result) => {
+    argento(query, data, pool, (result) => {
         if (result.status == 200) res.json(result.rows)
         else res.sendStatus(result.status)
     })
@@ -77,7 +77,7 @@ module.exports.get = function (query, data, req, res, pool, tag="stuff") {
 
 module.exports.post = function (query, data, req, res, pool, tag="stuff") {
     console.log("> " + req.ip + " - adding " + tag)
-    argento(query, data, pool, tag, (result) => {
+    argento(query, data, pool, (result) => {
         if (result.status == 200) res.json(result.rows)
         else res.sendStatus(result.status)
     })
@@ -85,7 +85,7 @@ module.exports.post = function (query, data, req, res, pool, tag="stuff") {
 
 module.exports.put = function (query, data, req, res, pool, tag="stuff") {
     console.log("> " + req.ip + " - updating " + tag)
-    argento(query, data, pool, tag, (result) => {
+    argento(query, data, pool, (result) => {
         if (result.status == 200) res.json(result.rows)
         else res.sendStatus(result.status)
     })
@@ -93,7 +93,7 @@ module.exports.put = function (query, data, req, res, pool, tag="stuff") {
 
 module.exports.delete = function (query, data, req, res, pool, tag="stuff") {
     console.log("> " + req.ip + " - deleting " + tag)
-    argento(query, data, pool, tag, (result) => {
+    argento(query, data, pool, (result) => {
         if (result.status == 200) res.json(result.rows)
         else res.sendStatus(result.status)
     })

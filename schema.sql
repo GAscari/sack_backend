@@ -1,6 +1,8 @@
 drop database if exists sack_v01;
 create database sack_v01;
 use sack_v01;
+
+
 CREATE TABLE `municipalities` (
   `municipality_id` int PRIMARY KEY AUTO_INCREMENT,
   `postal_code` int,
@@ -18,7 +20,8 @@ CREATE TABLE `addresses` (
 
 CREATE TABLE `humans` (
   `human_id` int PRIMARY KEY AUTO_INCREMENT,
-  `name` varchar(255),
+  `first_name` varchar(255),
+  `last_name` varchar(255),
   `image` varchar(255),
   `psw` varchar(255),
   `created_at` timestamp DEFAULT current_timestamp,
@@ -34,6 +37,7 @@ CREATE TABLE `humans` (
 
 CREATE TABLE `shops` (
   `shop_id` int PRIMARY KEY AUTO_INCREMENT,
+  `shop_cathegory_id` int,
   `name` varchar(255),
   `mail` varchar(255),
   `prefix` integer DEFAULT 39,
@@ -41,10 +45,10 @@ CREATE TABLE `shops` (
   `description` varchar(255),
   `image` varchar(255),
   `min_purchase` double,
-  `delivery_from_dow` int,
-  `delivery_to_dow` int,
-  `open_from_dow` int,
-  `open_to_dow` int,
+  `delivery_from_dow` varchar(255),
+  `delivery_to_dow` varchar(255),
+  `open_from_dow` varchar(255),
+  `open_to_dow` varchar(255),
   `delivery_from_time` time,
   `delivery_to_time` time,
   `open_from_time` time,
@@ -54,15 +58,15 @@ CREATE TABLE `shops` (
   `address_id` int
 );
 
+CREATE TABLE `shop_cathegories` (
+  `shop_cathegory_id` int PRIMARY KEY AUTO_INCREMENT,
+  `shop_cathegory_text` varchar(255)
+);
+
 CREATE TABLE `deliver_to` (
   `deliver_to_id` int PRIMARY KEY AUTO_INCREMENT,
   `shop_id` int,
-  `municipality` int
-);
-
-CREATE TABLE `dow` (
-  `dow_id` int PRIMARY KEY,
-  `dow_name` varchar(255)
+  `municipality_id` int
 );
 
 CREATE TABLE `human_tokens` (
@@ -83,7 +87,13 @@ CREATE TABLE `items` (
   `quantity` int,
   `price` double,
   `measurement_id` int,
-  `shop_id` int
+  `shop_id` int,
+  `item_cathegory_id` int
+);
+
+CREATE TABLE `item_cathegories` (
+  `item_cathegory_id` int PRIMARY KEY AUTO_INCREMENT,
+  `item_cathegory_text` varchar(255)
 );
 
 CREATE TABLE `measurements` (
@@ -91,28 +101,22 @@ CREATE TABLE `measurements` (
   `measurement_name` varchar(255)
 );
 
+CREATE TABLE `carts` (
+  `cart_shop_id` int,
+  `cart_human_id` int,
+  `cart_item_quantity` int,
+  `cart_item_id` int,
+  PRIMARY KEY (`cart_shop_id`, `cart_human_id`)
+);
+
 CREATE TABLE `orders` (
   `order_id` int PRIMARY KEY AUTO_INCREMENT,
   `created_at` timestamp DEFAULT current_timestamp,
   `shop_id` int,
+  `human_id` int,
   `seen` boolean,
   `scheduled` boolean,
   `received` boolean
-);
-
-CREATE TABLE `carts` (
-  `cart_id` int PRIMARY KEY AUTO_INCREMENT,
-  `shop_id` int,
-  `human_id` int,
-  `bought` boolean,
-  `created_at` timestamp
-);
-
-CREATE TABLE `cart_items` (
-  `in_cart_item_id` int PRIMARY KEY AUTO_INCREMENT,
-  `cart_id` int,
-  `item_quantity` int,
-  `item_id` int
 );
 
 CREATE TABLE `ordered_items` (
@@ -122,40 +126,39 @@ CREATE TABLE `ordered_items` (
   `item_id` int
 );
 
-ALTER TABLE `addresses` ADD FOREIGN KEY (`municipality_id`) REFERENCES `municipalities` (`municipality_id`);
+ALTER TABLE `addresses` ADD FOREIGN KEY (`municipality_id`) REFERENCES `municipalities` (`municipality_id`) ON DELETE CASCADE;
 
-ALTER TABLE `humans` ADD FOREIGN KEY (`address_id`) REFERENCES `addresses` (`address_id`);
+ALTER TABLE `humans` ADD FOREIGN KEY (`address_id`) REFERENCES `addresses` (`address_id`) ON DELETE CASCADE;
 
-ALTER TABLE `shops` ADD FOREIGN KEY (`delivery_from_dow`) REFERENCES `dow` (`dow_id`);
+ALTER TABLE `shops` ADD FOREIGN KEY (`shop_cathegory_id`) REFERENCES `shop_cathegories` (`shop_cathegory_id`) ON DELETE CASCADE;
 
-ALTER TABLE `shops` ADD FOREIGN KEY (`delivery_to_dow`) REFERENCES `dow` (`dow_id`);
-
-ALTER TABLE `shops` ADD FOREIGN KEY (`open_from_dow`) REFERENCES `dow` (`dow_id`);
-
-ALTER TABLE `shops` ADD FOREIGN KEY (`open_to_dow`) REFERENCES `dow` (`dow_id`);
-
-ALTER TABLE `shops` ADD FOREIGN KEY (`address_id`) REFERENCES `addresses` (`address_id`);
+ALTER TABLE `shops` ADD FOREIGN KEY (`address_id`) REFERENCES `addresses` (`address_id`) ON DELETE CASCADE;
 
 ALTER TABLE `deliver_to` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`);
 
-ALTER TABLE `deliver_to` ADD FOREIGN KEY (`municipality`) REFERENCES `municipalities` (`municipality_id`);
+ALTER TABLE `deliver_to` ADD FOREIGN KEY (`municipality_id`) REFERENCES `municipalities` (`municipality_id`) ON DELETE CASCADE;
 
-ALTER TABLE `human_tokens` ADD FOREIGN KEY (`human_id`) REFERENCES `humans` (`human_id`);
+ALTER TABLE `human_tokens` ADD FOREIGN KEY (`human_id`) REFERENCES `humans` (`human_id`) ON DELETE CASCADE;
 
-ALTER TABLE `items` ADD FOREIGN KEY (`measurement_id`) REFERENCES `measurements` (`measurement_id`);
+ALTER TABLE `items` ADD FOREIGN KEY (`measurement_id`) REFERENCES `measurements` (`measurement_id`) ON DELETE CASCADE;
 
-ALTER TABLE `items` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`);
+ALTER TABLE `items` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`) ON DELETE CASCADE;
 
-ALTER TABLE `orders` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`);
+ALTER TABLE `items` ADD FOREIGN KEY (`item_cathegory_id`) REFERENCES `item_cathegories` (`item_cathegory_id`) ON DELETE CASCADE;
 
-ALTER TABLE `carts` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`);
+ALTER TABLE `carts` ADD FOREIGN KEY (`cart_shop_id`) REFERENCES `shops` (`shop_id`) ON DELETE CASCADE;
 
-ALTER TABLE `carts` ADD FOREIGN KEY (`human_id`) REFERENCES `humans` (`human_id`);
+ALTER TABLE `carts` ADD FOREIGN KEY (`cart_human_id`) REFERENCES `humans` (`human_id`) ON DELETE CASCADE;
 
-ALTER TABLE `cart_items` ADD FOREIGN KEY (`cart_id`) REFERENCES `carts` (`cart_id`);
+ALTER TABLE `carts` ADD FOREIGN KEY (`cart_item_id`) REFERENCES `items` (`item_id`) ON DELETE CASCADE;
 
-ALTER TABLE `cart_items` ADD FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`);
+ALTER TABLE `orders` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`) ON DELETE CASCADE;
 
-ALTER TABLE `ordered_items` ADD FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`);
+ALTER TABLE `orders` ADD FOREIGN KEY (`human_id`) REFERENCES `humans` (`human_id`) ON DELETE CASCADE;
 
-ALTER TABLE `ordered_items` ADD FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`);
+ALTER TABLE `ordered_items` ADD FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE;
+
+ALTER TABLE `ordered_items` ADD FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`) ON DELETE CASCADE;
+
+
+

@@ -94,17 +94,17 @@ function getRandomInt(min, max) {
 // TODO: transazioni, dovrei riscrivere troppa tanta roba in troppo poco tempo (saremo intasati di indirizzi non referenziati)
 router.post("/register", function(req, res) {
     console.log("> " + req.ip + " - registration requested")
-    var query = "INSERT INTO addresses (street, number, municipality_id) VALUES (?, ?, ?);"
+    var query = "INSERT INTO addresses (address_street, address_number, municipality_id) VALUES (?, ?, ?);"
     var data = []
-    data.push(req.body.street); data.push(req.body.number); data.push(req.body.municipality_id)
-    db_query.argento(query, data, pool, "address", (result) => {
+    data.push(req.body.address_street); data.push(req.body.address_number); data.push(req.body.municipality_id)
+    db_query.argento(query, data, pool, (result) => {
         if (result.status == 200 && result.rows.affectedRows == 1) {
             address_id = result.rows.insertId
             data = []
-            data.push(req.body.name); data.push(req.body.psw); data.push(req.body.mail); data.push(req.body.telephone); data.push(address_id)
+            data.push(req.body.first_name); data.push(req.body.last_name); data.push(req.body.psw); data.push(req.body.mail); data.push(req.body.telephone); data.push(address_id)
             data.push(0); data.push(getRandomInt(1000000,9999999)); data.push(0); data.push(getRandomInt(1000000,9999999))
-            query = "INSERT INTO humans (name, psw, mail, telephone, address_id, verified_mail, verification_mail_code, verified_telephone, verification_telephone_code)"
-            query += " VALUES (?, SHA2(?,512), ?, ?, ?, ?, ?, ?, ?);"
+            query = "INSERT INTO humans (first_name, last_name, psw, mail, telephone, address_id, verified_mail, verification_mail_code, verified_telephone, verification_telephone_code)"
+            query += " VALUES (?, ?, SHA2(?,512), ?, ?, ?, ?, ?, ?, ?);"
             db_query.post(query, data, req, res, pool, "humans")
         } else {
             console.log("\tinternal server error (inserting_address)")
@@ -418,37 +418,84 @@ router.put("/human", function(req, res) {
     db_query.put(query, data, req, res, pool, "human")
 })
 
+router.delete("/human", function(req, res) {
+    var query="DELETE FROM humans WHERE human_id=?;"
+    var data=[]
+    data.push(req.query.human_id)
+    db_query.delete(query, data, req, res, pool, "human")
+})
+
 // <<<< CARTS >>>>
 
 router.get("/carts", function(req, res) {
-    var query="SELECT * FROM carts WHERE human_id=?;"
-    var data=[]
+    var query = "SELECT * FROM carts WHERE human_id=?;"
+    var data = []
     data.push(req.query.human_id)
-    db_query.get(query, data, req, res, pool, "human")
+    db_query.get(query, data, req, res, pool, "carts")
 })
 
 router.get("/cart", function(req, res) {
-    var query
-    var data=[]
+    var query=  "SELECT * FROM carts WHERE human_id=? and shop_id=?;" //LIMIT 1 non dovr. servire
+    var data = []
     data.push(req.query.human_id)
-
-    if (req.query.cart_id == null) {
-        query="SELECT * FROM carts WHERE human_id=? and shop_id=? LIMIT 1;"
-        data.push(req.query.shop_id)
-    } else {
-        query="SELECT * FROM carts WHERE human_id=? and cart_id=?;"
-        data.push(req.query.cart_id)
-    }
-    
+    data.push(req.query.shop_id)
     db_query.get(query, data, req, res, pool, "cart")
 })
 
 router.get("/cart/items", function(req, res) {
-    /*var query="SELECT * FROM carts WHERE human_id=?;"
-    var data=[]
+    var query = "SELECT * FROM carts WHERE human_id=? and shop_id=?;"
+    var data = []
     data.push(req.query.human_id)
-    db_query.get(query, data, req, res, pool, "human")*/
+    data.push(req.query.shop_id)
+    db_query.get(query, data, req, res, pool, "cart/items")
 })
+
+router.post("/cart/item", function(req, res) {
+    var query = "SELECT shop_id FROM items WHERE item_id=?;"
+    var data=[]
+    var cart_shop_id = null
+    data.push(req.body.cart_item_id)
+    db_query.argento(query, data, pool, (result) => {
+        if (result.err == null) {
+            cart_shop_id = result.rows[0].shop_id
+            query = "SELECT * FROM carts WHERE cart_shop_id=? AND cart_human_id=? AND cart_item_id=?;"
+            data=[]
+            data.push(cart_shop_id); data.push(req.query.human_id); data.push(req.body.cart_item_id)
+            db_query.argento(query, data, pool, (result) => {
+                if (result.err == null) {
+                    var cart_item_quantity_exists = false
+                    try {
+                        var dummy = result.rows[0].cart_item_quantity
+                        cart_item_quantity_exists = true
+                    } catch {}
+                    if (!cart_item_quantity_exists) {
+                        query = "INSERT INTO carts (cart_shop_id, cart_human_id, cart_item_quantity, cart_item_id) VALUES (?, ?, ?, ?);"
+                        data=[]
+                        data.push(cart_shop_id); data.push(req.query.human_id); data.push(req.body.cart_item_quantity); data.push(req.body.cart_item_id)
+                        db_query.argento(query, data, pool, (result) => {
+                            if (result.status == 200) res.json(result.rows)
+                            else res.sendStatus(result.status)
+                        })
+                    } else {
+                        query = "UPDATE carts SET cart_item_quantity=? WHERE cart_shop_id=? AND cart_human_id=?;"
+                        data=[]
+                        data.push(parseInt(req.body.cart_item_quantity) + result.rows[0].cart_item_quantity); data.push(cart_shop_id); data.push(req.query.human_id)
+                        db_query.argento(query, data, pool, (result) => {
+                            if (result.status == 200) res.json(result.rows)
+                            else res.sendStatus(result.status)
+                        })
+                    }
+                } else {
+                    res.sendStatus(result.status)
+                }
+            })
+        } else {
+            res.sendStatus(result.status)
+        }
+    })
+})
+
+
 
 
 module.exports = router
