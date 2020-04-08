@@ -6,6 +6,7 @@ var cluster = require("cluster")
 var https = require('https')
 var http = require('http')
 var fs = require('fs')
+var log = require('./log')
 
 var key = fs.readFileSync('privkey.pem')
 var cert = fs.readFileSync('cert.pem')
@@ -17,11 +18,12 @@ var options = {
 }
 
 if (cluster.isMaster) {
+    log(`MASTER ${process.pid} running`)
     cluster.on('fork', function(worker) {
-        console.log('worker' + worker.id + " up")
+        log(`worker ${worker.process.pid} up`)
     })
     cluster.on('exit', function(worker) {
-        console.log('worker' + worker.id + " down")
+        log(`worker ${worker.process.pid} down`)
         cluster.fork()
     })
     var cpu_count = os.cpus().length;
@@ -32,8 +34,8 @@ if (cluster.isMaster) {
     //server.listen(443)
     var server = http.createServer(router)
     server.listen(3000)
-    process.on('uncaughtException', (code) => {
-        console.log('worker fatal error - ' + code);
-        process.exit();
-    });
+    process.on('uncaughtException', (code, signal) => {
+        log(`worker down\n\tcode:(${code})\n\tsignal:(${signal})`)
+        process.exit()
+    })
 }
