@@ -35,7 +35,7 @@ if (cluster.isMaster) {
     var server = http.createServer(router)
     server.listen(3000)
     process.on('uncaughtException', (code, signal) => {
-        log(`worker down\n\tcode:(${code})\n\tsignal:(${signal})`)
+        log(`worker error...\n\tcode:(${code})\n\tsignal:(${signal})`)
         process.exit()
     })
 }

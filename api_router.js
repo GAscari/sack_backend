@@ -9,6 +9,9 @@ var log = require('./log')
 var nodemailer = require('nodemailer');
 var smtp_transport = require('nodemailer-smtp-transport');
 
+var sender_mail = "giacomoascari.work@gmail.com"
+var sender_psw = 'qyzcxiqllrasfiqs'
+
 var pool = mysql.createPool({
     host: "192.168.0.111",
     user: "remote",
@@ -22,17 +25,34 @@ var transporter = nodemailer.createTransport(smtp_transport({
     port: 465,
     secure: true,
     auth: {
-        user: 'giacomoascari.work@gmail.com',
-        pass: 'qyzcxiqllrasfiqs'
+        user: sender_mail,
+        pass: sender_psw
         
     }
 }))
+
+function send_mail(name, from, to, subject, html, callback) {
+    var mailOptions = {
+        from: `"${name}" <${from}>`,
+        to: to,
+        subject: subject,
+        //text: text,
+        html: html
+    }
+    transporter.sendMail(mailOptions, (error, info) => {
+        callback(error, info)
+    })
+}
+
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 router.use(express.json())
 router.use(express.urlencoded({ extended: true }))
 
 
-//USE - stampa ip e ora richiesta
+// <<<< INTESTAZIONE >>>>
 //#region
 router.use(function(req, res, next) {
     log(`> ip:${req.ip} - ${(new Date(Date.now())).toUTCString()}, pid:${process.pid}`)
@@ -40,7 +60,7 @@ router.use(function(req, res, next) {
 })
 //#endregion
 
-//POST - chiede il rilascio di un token con login
+// <<<< LOGIN >>>>
 //#region
 router.post("/login", function(req, res) {
     log("> " + req.ip + " - token requested")
@@ -49,13 +69,13 @@ router.post("/login", function(req, res) {
     var device_uuid = req.body.device_uuid
     pool.getConnection(function(err, connection){
         if (!err) {
-            var query="select count(*) as authorized, human_id from humans where mail=? and psw=SHA2(?, 512) group by human_id;"
+            var query="select count(*) as authorized, human_id from humans where mail=? and psw=SHA2(?, 512) and verified_mail=true group by human_id;"
             var data=[]
             data.push(mail); data.push(psw)
             connection.query(query, data,  function(err, rows, fields){
                 if (!err) {
                     log("\tselect ok")
-                    if (rows[0].authorized == 1) {
+                    if (rows && rows[0] && rows[0].authorized && rows[0].authorized == 1) {
                         var human_id = rows[0].human_id
                         var query="insert into human_tokens(uuid, device_uuid, human_id) values(?, ?, ?);"
                         var data=[]
@@ -83,8 +103,7 @@ router.post("/login", function(req, res) {
                             }
                         })
                     } else {
-                        log("\tunauthorized to get token (" + rows[0].authorized + "???)")
-                        log(err)
+                        log("\tunauthorized to get token")
                         res.sendStatus(403)
                     }
                 } else {
@@ -104,11 +123,9 @@ router.post("/login", function(req, res) {
 })
 //#endregion
 
-//POST - chiede la registrazione di un human
+// <<<< REGISTER >>>>
 //#region 
-function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+
 router.post("/register", function(req, res) {
     log("> " + req.ip + " - registration requested")
     var query = "INSERT INTO addresses (address_street, address_number, municipality_id) VALUES (?, ?, ?);"
@@ -118,11 +135,30 @@ router.post("/register", function(req, res) {
         if (result.status == 200 && result.rows.affectedRows == 1) {
             address_id = result.rows.insertId
             data = []
+            var verification_mail_code = getRandomInt(1000000,9999999)
+            var verification_telephone_code = getRandomInt(1000000,9999999)
             data.push(req.body.first_name); data.push(req.body.last_name); data.push(req.body.psw); data.push(req.body.mail); data.push(req.body.telephone); data.push(address_id)
-            data.push(0); data.push(getRandomInt(1000000,9999999)); data.push(0); data.push(getRandomInt(1000000,9999999))
+            data.push(0); data.push(verification_mail_code); data.push(0); data.push(verification_telephone_code)
             query = "INSERT INTO humans (first_name, last_name, psw, mail, telephone, address_id, verified_mail, verification_mail_code, verified_telephone, verification_telephone_code)"
             query += " VALUES (?, ?, SHA2(?,512), ?, ?, ?, ?, ?, ?, ?);"
-            db_query.post(query, data, req, res, pool, "humans")
+            log("> " + req.ip + " - adding humans")
+            db_query.argento(query, data, pool, (result) => {
+                if (result.status == 200) {
+                    res.json(result.rows)
+                    var url = `http://localhost:3000/sack/v01/verify/mail?human_id=${result.rows.insertId}&verification_mail_code=${verification_mail_code}`
+                    var from = `"Sack" <${sender_mail}>`
+                    var html = `<p>Clicca <a href=${url}>QUI</a> per attivare il tuo account.</p>`
+                    send_mail("Sack", sender_mail, req.body.mail, "Verifica la tua e-mail", html, (error, info) => {
+                        log("\tsending ver. mail to " + req.body.mail)
+                            if (error) {
+                                log(error)
+                            } else {
+                                log('\temail sent: ' + info.response)
+                            }
+                    })
+                }
+                else res.sendStatus(result.status)
+            })
         } else {
             log("\tinternal server error (inserting_address)")
             log(result)
@@ -132,7 +168,28 @@ router.post("/register", function(req, res) {
 })
 //#endregion
 
-//USE - verifica che il token sia autorizzato
+// <<<< VERIFY (mail) >>>>
+//#region 
+router.get("/verify/mail", function(req, res) {
+    var query
+    var data=[]
+    query="UPDATE humans SET verified_mail=true WHERE human_id=? AND verification_mail_code=?;"
+    data.push(req.query.human_id); data.push(req.query.verification_mail_code)
+    //db_query.put(query, data, req, res, pool, "humans (verify)")
+    log("> " + req.ip + " - verifying ")
+    db_query.argento(query, data, pool, (result) => {
+        if (result.status == 200 && result.rows.changedRows == 1)  {
+            res.sendStatus(200)
+        } else if (result.status == 200) {
+            res.sendStatus(403)
+        } else {
+            res.sendStatus(result.status)
+        }
+    })
+})
+//#endregion
+
+// <<<< auth process >>>>
 //#region
 router.use(function(req, res, next) {
     log("> " + req.ip + " - access requested")
@@ -180,22 +237,8 @@ router.get("/test", function(req, res) {
         connection.release()
     })
 })
-
-function send_mail(name, from, to, subject, html, callback) {
-    var mailOptions = {
-        from: `"${name}" <${from}>`,
-        to: to,
-        subject: subject,
-        //text: text,
-        html: html
-    }
-    transporter.sendMail(mailOptions, (error, info) => {
-        callback(error, info)
-    })
-}
-
 router.post("/mail", function(req, res) {
-    send_mail(req.body.name, "giacomoascari.work@gmail.com", req.body.to, req.body.subject, "<body><i>muahahah</i></body>", (error, info) =>{
+    send_mail(req.body.name, "giacomoascari.work@gmail.com", req.body.to, req.body.subject, req.body.html, (error, info) =>{
         log("\tsending mail to " + req.body.to)
         if (error) {
             console.log(error)
@@ -280,9 +323,15 @@ router.delete("/item", function(req, res) {
 router.get("/shops", function(req, res) {
     var query
     var data=[]
-    query="SELECT * FROM shops NATURAL JOIN addresses NATURAL JOIN municipalities;"
-    //query = "SELECT * d FROM (SELECT * c FROM (SELECT * b FROM (SELECT * a FROM shops INNER JOIN dow on shops.delivery_from_dow=dow.dow_id) INNER JOIN dow on a.delivery_to_dow=dow.dow_id) INNER JOIN dow on b.opening_from_dow=dow.dow_id) INNER JOIN dow on c.opening_to_dow=dow.dow_id;"
+    query="SELECT * FROM shops NATURAL LEFT JOIN addresses NATURAL LEFT JOIN municipalities;"
     db_query.get(query, data, req, res, pool, "shops")
+})
+
+router.get("/shops/local", function(req, res) {
+    var query="SELECT * FROM shops NATURAL JOIN deliver_to WHERE municipality_id=(SELECT municipality_id FROM humans NATURAL JOIN addresses WHERE human_id=?);"
+    var data=[]
+    data.push(req.query.human_id)
+    db_query.get(query, data, req, res, pool, "shops/local")
 })
 
 router.get("/shop", function(req, res) {

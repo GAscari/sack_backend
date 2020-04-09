@@ -2,7 +2,6 @@ drop database if exists sack_v01;
 create database sack_v01;
 use sack_v01;
 
-
 CREATE TABLE `municipalities` (
   `municipality_id` int PRIMARY KEY AUTO_INCREMENT,
   `postal_code` int,
@@ -64,9 +63,9 @@ CREATE TABLE `shop_cathegories` (
 );
 
 CREATE TABLE `deliver_to` (
-  `deliver_to_id` int PRIMARY KEY AUTO_INCREMENT,
   `shop_id` int,
-  `municipality_id` int
+  `municipality_id` int,
+  PRIMARY KEY (`shop_id`, `municipality_id`)
 );
 
 CREATE TABLE `human_tokens` (
@@ -134,9 +133,9 @@ ALTER TABLE `shops` ADD FOREIGN KEY (`shop_cathegory_id`) REFERENCES `shop_cathe
 
 ALTER TABLE `shops` ADD FOREIGN KEY (`address_id`) REFERENCES `addresses` (`address_id`) ON DELETE CASCADE;
 
-ALTER TABLE `deliver_to` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`);
-
 ALTER TABLE `deliver_to` ADD FOREIGN KEY (`municipality_id`) REFERENCES `municipalities` (`municipality_id`) ON DELETE CASCADE;
+
+ALTER TABLE `deliver_to` ADD FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`) ON DELETE CASCADE;
 
 ALTER TABLE `human_tokens` ADD FOREIGN KEY (`human_id`) REFERENCES `humans` (`human_id`) ON DELETE CASCADE;
 
@@ -159,6 +158,9 @@ ALTER TABLE `orders` ADD FOREIGN KEY (`human_id`) REFERENCES `humans` (`human_id
 ALTER TABLE `ordered_items` ADD FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE;
 
 ALTER TABLE `ordered_items` ADD FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`) ON DELETE CASCADE;
+
+
+
 
 
 

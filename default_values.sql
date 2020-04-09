@@ -1,13 +1,4 @@
-INSERT INTO humans (first_name, last_name, psw, mail, verified_mail)
-VALUES ("ignazio", "de loyola", SHA2('yeet', 512), "dev@dev.com", true);
 
-INSERT INTO human_tokens (uuid, device_uuid, creation, human_id)
-VALUES ('12473807-8e6d-45da-8f77-fc78878fd6ae', 'aaaa', '2020-04-01 16:32:54', '1');
-
-INSERT INTO measurements (measurement_id, measurement_name)
-VALUES
-    (1, "kg"),
-    (2, "cad.");
 
 INSERT INTO municipalities (postal_code, municipality_name)
 VALUES
@@ -234,12 +225,31 @@ VALUES
 INSERT INTO addresses (address_number, address_street, municipality_id)
 VALUES
 	(3, "via asiago", 154),
-    (4, "via dei cimbri", 154);
+    (4, "via dei cimbri", 154),
+    (5, "aaaaaaaaaaa", 180);
 
-INSERT INTO shops (name, delivery_from_dow,  delivery_to_dow, open_from_dow,  open_to_dow, address_id)
+INSERT INTO humans (first_name, last_name, psw, mail, verified_mail, address_id)
+VALUES ("ignazio", "de loyola", SHA2('yeet', 512), "dev@dev.com", true, 2);
+
+INSERT INTO human_tokens (uuid, device_uuid, creation, human_id)
+VALUES ('12473807-8e6d-45da-8f77-fc78878fd6ae', 'aaaa', '2020-04-01 16:32:54', '1');
+
+INSERT INTO measurements (measurement_id, measurement_name)
 VALUES
-    ("shop1", "lunedì", "venerdì", "lunedì", "sabato", 1),
-    ("shop2", "lunedì", "venerdì", "lunedì", "sabato", 2);
+    (1, "kg"),
+    (2, "cad.");
+
+INSERT INTO shops (name, delivery_from_dow,  delivery_to_dow, open_from_dow,  open_to_dow)
+VALUES
+    ("shop1", "lunedì", "venerdì", "lunedì", "sabato"),
+    ("shop2", "lunedì", "venerdì", "lunedì", "sabato");
+    
+INSERT INTO deliver_to (shop_id, municipality_id)
+VALUES
+	(1, 154),
+    (1, 155),
+    (2, 181),
+	(2, 180);
     
 
 INSERT INTO items (item_name, item_vendor, image, description, inventory_applies, quantity, price, measurement_id, shop_id)
