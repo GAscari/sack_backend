@@ -35,7 +35,7 @@ var log = require('./log')
 //    }
 //}
 
-function argento (query, data, pool, callback) {
+function interrogate (query, data, pool, callback) {
     log("\tquery: " + query)
     log("\tdata: " + data)
     var bad = false
@@ -65,11 +65,11 @@ function argento (query, data, pool, callback) {
         })
     }
 }
-module.exports.argento = argento
+module.exports.interrogate = interrogate
 
 module.exports.get = function (query, data, req, res, pool, tag="stuff") {
     log("> " + req.ip + " - " + tag + " requested")
-    argento(query, data, pool, (result) => {
+    interrogate(query, data, pool, (result) => {
         if (result.status == 200) res.json(result.rows)
         else res.sendStatus(result.status)
     })
@@ -78,7 +78,7 @@ module.exports.get = function (query, data, req, res, pool, tag="stuff") {
 
 module.exports.post = function (query, data, req, res, pool, tag="stuff") {
     log("> " + req.ip + " - adding " + tag)
-    argento(query, data, pool, (result) => {
+    interrogate(query, data, pool, (result) => {
         if (result.status == 200) res.json(result.rows)
         else res.sendStatus(result.status)
     })
@@ -86,7 +86,7 @@ module.exports.post = function (query, data, req, res, pool, tag="stuff") {
 
 module.exports.put = function (query, data, req, res, pool, tag="stuff") {
     log("> " + req.ip + " - updating " + tag)
-    argento(query, data, pool, (result) => {
+    interrogate(query, data, pool, (result) => {
         if (result.status == 200) res.json(result.rows)
         else res.sendStatus(result.status)
     })
@@ -94,7 +94,7 @@ module.exports.put = function (query, data, req, res, pool, tag="stuff") {
 
 module.exports.delete = function (query, data, req, res, pool, tag="stuff") {
     log("> " + req.ip + " - deleting " + tag)
-    argento(query, data, pool, (result) => {
+    interrogate(query, data, pool, (result) => {
         if (result.status == 200) res.json(result.rows)
         else res.sendStatus(result.status)
     })

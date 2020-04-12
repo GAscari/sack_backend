@@ -1,5 +1,4 @@
 
-
 INSERT INTO municipalities (postal_code, municipality_name)
 VALUES
 	(38061,"Ala"),
@@ -250,7 +249,13 @@ VALUES
     (1, 155),
     (2, 181),
 	(2, 180);
-    
+
+INSERT INTO categories (category_title)
+VALUES
+	("alimentari"),
+    ("abbigliamento"),
+    ("parafarmaceutico"),
+    ("casalinghi");
 
 INSERT INTO items (item_name, item_vendor, image, description, inventory_applies, quantity, price, measurement_id, shop_id)
 VALUES
@@ -276,3 +281,19 @@ VALUES
     ("item9", "item_vendor9", "image_url9", "description9", false, 8, 10.99, 2, 2),
     ("item10", "item_vendor10", "image_url10", "description10", false, 8, 10.99, 2, 2),
     ("item11", "item_vendor11", "image_url11", "description11", false, 8, 10.99, 2, 2);
+    
+    INSERT INTO item_categories(item_id, category_id)
+    VALUES
+		(1, 1),
+        (1, 3),
+        (2, 3),
+        (3, 4),
+        (3, 2);
+        
+	INSERT INTO shop_categories(shop_id, category_id)
+    VALUES
+		(1, 1),
+        (1, 3),
+        (2, 3),
+        (2, 4),
+        (1, 2);

@@ -19,6 +19,7 @@
   "homepage": "https://gitlab.com/GAscari/sack_v.01#readme",
   "dependencies": {
     "nodemailer": "^6.4.6",
-    "nodemailer-smtp-transport": "^2.7.4"
+    "nodemailer-smtp-transport": "^2.7.4",
+    "xmysql": "^0.5.1"
   }
 }
