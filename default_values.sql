@@ -225,7 +225,8 @@ INSERT INTO addresses (address_number, address_street, municipality_id)
 VALUES
 	(3, "via asiago", 154),
     (4, "via dei cimbri", 154),
-    (5, "aaaaaaaaaaa", 180);
+    (5, "aaaaaaaaaaa", 180),
+    (6, "bbbbbb", 154);
 
 INSERT INTO humans (first_name, last_name, psw, mail, verified_mail, address_id)
 VALUES ("ignazio", "de loyola", SHA2('yeet', 512), "dev@dev.com", true, 2);
@@ -238,10 +239,10 @@ VALUES
     (1, "kg"),
     (2, "cad.");
 
-INSERT INTO shops (name, delivery_from_dow,  delivery_to_dow, open_from_dow,  open_to_dow)
+INSERT INTO shops (name, delivery_from_dow,  delivery_to_dow, open_from_dow,  open_to_dow, address_id)
 VALUES
-    ("shop1", "lunedì", "venerdì", "lunedì", "sabato"),
-    ("shop2", "lunedì", "venerdì", "lunedì", "sabato");
+    ("shop1", "lunedì", "venerdì", "lunedì", "sabato", 3),
+    ("shop2", "lunedì", "venerdì", "lunedì", "sabato", 4);
     
 INSERT INTO deliver_to (shop_id, municipality_id)
 VALUES

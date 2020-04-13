@@ -2,15 +2,9 @@ var express = require("express")
 const uuid = require('uuid/v4')
 var router = express.Router()
 var mysql = require('mysql')
-var util = require('util')
 var db = require('./db')
-var fs = require('fs')
 var log = require('./log')
-var nodemailer = require('nodemailer');
-var smtp_transport = require('nodemailer-smtp-transport');
-
-var sender_mail = "giacomoascari.work@gmail.com"
-var sender_psw = 'qyzcxiqllrasfiqs'
+var mailer = require("./mailer")
 
 var pool = mysql.createPool({
     host: "192.168.0.111",
@@ -19,30 +13,7 @@ var pool = mysql.createPool({
     database: "sack_v01",
     multipleStatements: true
 })
-
-var transporter = nodemailer.createTransport(smtp_transport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-        user: sender_mail,
-        pass: sender_psw
-        
-    }
-}))
-
-function send_mail(name, from, to, subject, html, callback) {
-    var mailOptions = {
-        from: `"${name}" <${from}>`,
-        to: to,
-        subject: subject,
-        //text: text,
-        html: html
-    }
-    transporter.sendMail(mailOptions, (error, info) => {
-        callback(error, info)
-    })
-}
+module.exports.pool = pool
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -52,7 +23,7 @@ router.use(express.json())
 router.use(express.urlencoded({ extended: true }))
 
 
-// <<<< INTESTAZIONE >>>>
+// INTESTAZIONE
 //#region
 router.use(function(req, res, next) {
     log(`> ip:${req.ip} - ${(new Date(Date.now())).toUTCString()}, pid:${process.pid}`)
@@ -60,7 +31,7 @@ router.use(function(req, res, next) {
 })
 //#endregion
 
-// <<<< LOGIN >>>>
+// LOGIN
 //#region
 router.post("/login", function(req, res) {
     log("> " + req.ip + " - token requested")
@@ -123,7 +94,7 @@ router.post("/login", function(req, res) {
 })
 //#endregion
 
-// <<<< REGISTER >>>>
+// REGISTER
 //#region 
 
 router.post("/register", function(req, res) {
@@ -146,9 +117,8 @@ router.post("/register", function(req, res) {
                 if (result.status == 200) {
                     res.json(result.rows)
                     var url = `http://localhost:3000/sack/v01/verify/mail?human_id=${result.rows.insertId}&verification_mail_code=${verification_mail_code}`
-                    var from = `"Sack" <${sender_mail}>`
                     var html = `<p>Clicca <a href=${url}>QUI</a> per attivare il tuo account.</p>`
-                    send_mail("Sack", sender_mail, req.body.mail, "Verifica la tua e-mail", html, (error, info) => {
+                    mailer.send_mail("Sack", req.body.mail, "Verifica la tua e-mail", html, (error, info) => {
                         log("\tsending ver. mail to " + req.body.mail)
                             if (error) {
                                 log(error)
@@ -168,7 +138,7 @@ router.post("/register", function(req, res) {
 })
 //#endregion
 
-// <<<< VERIFY (mail) >>>>
+// VERIFY (mail)
 //#region 
 router.get("/verify/mail", function(req, res) {
     var query
@@ -189,7 +159,7 @@ router.get("/verify/mail", function(req, res) {
 })
 //#endregion
 
-// <<<< auth process >>>>
+// auth process
 //#region
 router.use(function(req, res, next) {
     log("> " + req.ip + " - access requested")
@@ -224,7 +194,7 @@ router.use(function(req, res, next) {
 })
 //#endregion
 
-// <<<< API TEST + MAIL >>>>
+// API TEST + MAIL
 //#region
 router.get("/test", function(req, res) {
     pool.getConnection(function(err, connection){
@@ -238,7 +208,7 @@ router.get("/test", function(req, res) {
     })
 })
 router.post("/mail", function(req, res) {
-    send_mail(req.body.name, "giacomoascari.work@gmail.com", req.body.to, req.body.subject, req.body.html, (error, info) =>{
+    mailer.send_mail(req.body.name, req.body.to, req.body.subject, req.body.html, (error, info) =>{
         log("\tsending mail to " + req.body.to)
         if (error) {
             console.log(error)
@@ -251,142 +221,14 @@ router.post("/mail", function(req, res) {
 })
 //#endregion
 
-// <<<< ITEMS >>>>
-//#region
-router.get("/items", function(req, res) {
-    var query
-    var data = []
-    if (req.query.shop_id) {
-        query = "SELECT items.*, measurements.*, GROUP_CONCAT(category_title) as categories_concat FROM items NATURAL LEFT JOIN measurements NATURAL LEFT JOIN item_categories NATURAL LEFT JOIN categories WHERE shop_id=? GROUP BY item_id;"
-        data.push(req.query.shop_id)
-    } else {
-        query = "SELECT items.*, measurements.*, GROUP_CONCAT(category_title) as categories_concat FROM items NATURAL LEFT JOIN measurements NATURAL LEFT JOIN item_categories NATURAL LEFT JOIN categories GROUP BY item_id;"
-    }
-    db.get(query, data, req, res, pool, "items")
-})
 
-router.get("/item", function(req, res) {
-    var query = "SELECT items.*, measurements.*, GROUP_CONCAT(category_title) as categories_concat FROM items NATURAL LEFT JOIN measurements NATURAL LEFT JOIN item_categories NATURAL LEFT JOIN categories WHERE item_id=? GROUP BY item_id;"
+// <<<< ITEM_CATEGORIES >>>>
+//#region
+router.get("/item_categories", function(req, res) {
+    var query = "SELECT * FROM item_categories NATURAL LEFT JOIN categories WHERE item_id=?;"
     var data = []
     data.push(req.query.item_id)
-    db.get(query, data, req, res, pool, "item")
-})
-
-router.post("/item", function(req, res) {
-    var query = "INSERT INTO items (" 
-    var query2 = ") VALUES ("
-    
-    var data=[]
-
-    for (var prop in req.body) {
-        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
-            query += prop + ", "
-            query2 += "?, "
-            data.push(req.body[prop])
-        }
-    }
-    query = query.slice(0, -2)
-    query2 = query2.slice(0, -2)
-    query += query2 + ");"
-    db.post(query, data, req, res, pool, "item")
-})
-
-router.put("/item", function(req, res) {
-    var query="UPDATE items SET "
-    var data=[]
-    for (var prop in req.body) {
-        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
-            query += prop + "=?, "
-            data.push(req.body[prop])
-        }
-    }
-    query = query.slice(0, -2)
-    query += " WHERE item_id=?;"
-    data.push(req.query.item_id)
-    db.put(query, data, req, res, pool, "item")
-})
-
-router.delete("/item", function(req, res) {
-    var query="DELETE FROM items WHERE item_id=?;"
-    var data=[]
-    data.push(req.query.item_id)
-    db.delete(query, data, req, res, pool, "item")
-})
-//#endregion
-
-// <<<< SHOPS >>>>
-//#region
-router.get("/shops", function(req, res) {
-    var data = []
-    var query = "SELECT shops.*, addresses.*, municipalities.*, GROUP_CONCAT(category_title) as categories_concat FROM shops NATURAL LEFT JOIN addresses NATURAL LEFT JOIN municipalities NATURAL LEFT JOIN shop_categories NATURAL LEFT JOIN categories GROUP BY shop_id;"
-    db.get(query, data, req, res, pool, "shops")
-})
-
-router.get("/shops/local", function(req, res) {
-    var query = "SELECT shops.*, addresses.*, municipalities.*, GROUP_CONCAT(category_title) as categories_concat FROM shops NATURAL LEFT JOIN addresses NATURAL LEFT JOIN municipalities NATURAL LEFT JOIN shop_categories NATURAL LEFT JOIN categories GROUP BY shop_id;"
-
-    var query="SELECT s* FROM shops NATURAL LEFT JOIN deliver_to WHERE municipality_id=(SELECT municipality_id FROM humans NATURAL LEFT JOIN addresses NATURAL LEFT JOIN shop_categories WHERE human_id=?);"
-    var data=[]
-    data.push(req.query.human_id)
-    db.get(query, data, req, res, pool, "shops/local")
-})
-
-router.get("/shop", function(req, res) {
-    var query = "SELECT shops.*, addresses.*, municipalities.*, GROUP_CONCAT(category_title) as categories_concat FROM shops NATURAL LEFT JOIN addresses NATURAL LEFT JOIN municipalities NATURAL LEFT JOIN shop_categories NATURAL LEFT JOIN categories WHERE shop_id=? GROUP BY shop_id;"
-    var data = []
-    data.push(req.query.shop_id)
-    db.get(query, data, req, res, pool, "shop")
-})
-
-router.post("/shop", function(req, res) {
-    var query = "INSERT INTO shops (" 
-    var query2 = ") VALUES ("
-    
-    var data=[]
-
-    for (var prop in req.body) {
-        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
-            query += prop + ", "
-            query2 += "?, "
-            data.push(req.body[prop])
-        }
-    }
-    query = query.slice(0, -2)
-    query2 = query2.slice(0, -2)
-    query += query2 + ");"
-    db.post(query, data, req, res, pool, "shop")
-})
-
-router.put("/shop", function(req, res) {
-    var query="UPDATE shops SET "
-    var data=[]
-    for (var prop in req.body) {
-        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
-            query += prop + "=?, "
-            data.push(req.body[prop])
-        }
-    }
-    query = query.slice(0, -2)
-    query += " WHERE shop_id=?;"
-    data.push(req.query.shop_id)
-    db.put(query, data, req, res, pool, "shop")
-})
-
-router.delete("/shop", function(req, res) {
-    var query="DELETE FROM shops WHERE shop_id=?;"
-    var data=[]
-    data.push(req.query.shop_id)
-    db.delete(query, data, req, res, pool, "shop")
-})
-//#endregion
-
-// <<<< ADDRESSES >>>>
-//#region
-router.get("/addresses", function(req, res) {
-    var query
-    var data=[]
-    query="SELECT * FROM addresses NATURAL LEFT JOIN municipalities;"
-    db.get(query, data, req, res, pool, "addresses")
+    db.get(query, data, req, res, pool, "item_categories")
 })
 
 router.get("/address", function(req, res) {
@@ -436,91 +278,15 @@ router.delete("/address", function(req, res) {
 })
 //#endregion
 
-// <<<< MUNICIPALITIES >>>>
-//#region
-router.get("/municipalities", function(req, res) {
-    var query
-    var data=[]
-    query="SELECT * FROM municipalities;"
-    db.get(query, data, req, res, pool, "municipalities")
-})
+router.use("/items", require("./routes/items"))
 
-router.get("/municipality", function(req, res) {
-    var query="SELECT * FROM municipalities WHERE municipality_id=?;"
-    var data=[]
-    data.push(req.query.shop_id)
-    db.get(query, data, req, res, pool, "municipality")
-})
+router.use("/shops", require("./routes/shops"))
 
-router.post("/municipality", function(req, res) {
-    var query = "INSERT INTO municipalities (" 
-    var query2 = ") VALUES ("
-    var data=[]
-    for (var prop in req.body) {
-        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
-            query += prop + ", "
-            query2 += "?, "
-            data.push(req.body[prop])
-        }
-    }
-    query = query.slice(0, -2)
-    query2 = query2.slice(0, -2)
-    query += query2 + ");"
-    db.post(query, data, req, res, pool, "municipality")
-})
+router.use("/addresses", require("./routes/addresses"))
 
-router.put("/municipalities", function(req, res) {
-    var query="UPDATE addresses SET "
-    var data=[]
-    for (var prop in req.body) {
-        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
-            query += prop + "=?, "
-            data.push(req.body[prop])
-        }
-    }
-    query = query.slice(0, -2)
-    query += " WHERE municipality_id=?;"
-    data.push(req.query.shop_id)
-    db.put(query, data, req, res, pool, "municipality")
-})
+router.use("/municipalities", require("./routes/municipalities"))
 
-router.delete("/municipality", function(req, res) {
-    var query="DELETE FROM municipalities WHERE municipality_id=?;"
-    var data=[]
-    data.push(req.query.shop_id)
-    db.delete(query, data, req, res, pool, "shop")
-})
-//#endregion
-
-// <<<< HUMANS >>>>
-//#region
-router.get("/human", function(req, res) {
-    var query="SELECT * FROM humans WHERE human_id=?;"
-    var data=[]
-    data.push(req.query.human_id)
-    db.get(query, data, req, res, pool, "human")
-})
-router.put("/human", function(req, res) {
-    var query="UPDATE humans SET "
-    var data=[]
-    for (var prop in req.body) {
-        if (Object.prototype.hasOwnProperty.call(req.body, prop)) {
-            query += prop + "=?, "
-            data.push(req.body[prop])
-        }
-    }
-    query = query.slice(0, -2)
-    query += " WHERE human_id=?;"
-    data.push(req.query.human_id)
-    db.put(query, data, req, res, pool, "human")
-})
-router.delete("/human", function(req, res) {
-    var query="DELETE FROM humans WHERE human_id=?;"
-    var data=[]
-    data.push(req.query.human_id)
-    db.delete(query, data, req, res, pool, "human")
-})
-//#endregion
+router.use("/humans", require("./routes/humans"))
 
 // <<<< CARTS >>>>
 //#region
